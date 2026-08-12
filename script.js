@@ -40,6 +40,7 @@ const mobileNav = document.querySelector(".mobile-nav");
 const mobileLinks = document.querySelectorAll(".mobile-nav a");
 const highlightRow = document.querySelector("#highlightRow");
 const storyViewer = document.querySelector("#storyViewer");
+const storyShell = document.querySelector(".story-shell");
 const storyProgress = document.querySelector("#storyProgress");
 const storyAvatar = document.querySelector("#storyAvatar");
 const storyTitle = document.querySelector("#storyTitle");
@@ -59,6 +60,8 @@ let progressFrame = 0;
 let lastFocusedElement = null;
 let touchStartX = 0;
 let touchStartY = 0;
+let activeLoadToken = 0;
+const preloadedImages = new Map();
 
 function setHeaderState() {
   if (!header) return;
@@ -104,6 +107,46 @@ function buildHighlightButtons() {
 
 function currentHighlight() {
   return highlights[activeHighlightIndex];
+}
+
+function preloadImage(path) {
+  if (preloadedImages.has(path)) {
+    return preloadedImages.get(path);
+  }
+
+  const loadPromise = new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => {
+      preloadedImages.delete(path);
+      reject();
+    };
+    image.src = path;
+  });
+
+  preloadedImages.set(path, loadPromise);
+  return loadPromise;
+}
+
+function preloadNearbyStories() {
+  const highlight = currentHighlight();
+  const storyIndexes = [
+    activeStoryIndex - 1,
+    activeStoryIndex + 1,
+    activeStoryIndex + 2
+  ];
+
+  storyIndexes.forEach((index) => {
+    const storyPath = highlight.stories[index];
+    if (storyPath) {
+      preloadImage(storyPath).catch(() => {});
+    }
+  });
+}
+
+function setStoryLoading(isLoading) {
+  if (!storyShell) return;
+  storyShell.classList.toggle("is-loading", isLoading);
 }
 
 function cancelProgress() {
@@ -167,16 +210,38 @@ function startProgress() {
 function renderStory() {
   const highlight = currentHighlight();
   const storyPath = highlight.stories[activeStoryIndex];
+  const loadToken = activeLoadToken + 1;
+
+  activeLoadToken = loadToken;
+  cancelProgress();
+  setStoryLoading(true);
+  const storyLoad = preloadImage(storyPath);
+  preloadNearbyStories();
 
   buildProgressBars();
   storyAvatar.src = highlight.cover;
   storyTitle.textContent = highlight.title;
   storyTitle.dir = "auto";
   storyCounter.textContent = `${activeStoryIndex + 1} / ${highlight.stories.length}`;
-  storyImage.src = storyPath;
-  storyImage.alt = `${highlight.title} story ${activeStoryIndex + 1}`;
 
-  startProgress();
+  storyLoad
+    .then((image) => {
+      if (loadToken !== activeLoadToken) return;
+
+      storyImage.src = image.src;
+      storyImage.alt = `${highlight.title} story ${activeStoryIndex + 1}`;
+      setStoryLoading(false);
+      preloadNearbyStories();
+      startProgress();
+    })
+    .catch(() => {
+      if (loadToken !== activeLoadToken) return;
+
+      storyImage.src = storyPath;
+      storyImage.alt = `${highlight.title} story ${activeStoryIndex + 1}`;
+      setStoryLoading(false);
+      startProgress();
+    });
 }
 
 function openStory(highlightIndex, storyIndex) {
@@ -199,7 +264,9 @@ function openStory(highlightIndex, storyIndex) {
 function closeStory() {
   if (!storyViewer) return;
 
+  activeLoadToken += 1;
   cancelProgress();
+  setStoryLoading(false);
   storyViewer.classList.remove("is-open");
   storyViewer.setAttribute("aria-hidden", "true");
   storyViewer.setAttribute("inert", "");

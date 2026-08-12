@@ -587,6 +587,27 @@ h1 {
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.52);
 }
 
+.story-shell::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 6;
+  width: 42px;
+  height: 42px;
+  border: 3px solid rgba(255, 250, 246, 0.24);
+  border-top-color: var(--orange-500);
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.story-shell.is-loading::after {
+  opacity: 1;
+  animation: storySpin 0.85s linear infinite;
+}
+
 .story-progress {
   position: absolute;
   top: 10px;
@@ -725,6 +746,12 @@ h1 {
   height: 100%;
   object-fit: contain;
   background: #080d0a;
+  opacity: 1;
+  transition: opacity 0.18s ease;
+}
+
+.story-shell.is-loading .story-stage img {
+  opacity: 0.28;
 }
 
 .story-zone {
@@ -1028,5 +1055,11 @@ h1 {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
+  }
+}
+
+@keyframes storySpin {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
   }
 }
