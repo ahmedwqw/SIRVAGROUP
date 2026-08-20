@@ -150,21 +150,6 @@ button {
   color: var(--white);
 }
 
-.top-nav .nav-login,
-.mobile-nav .nav-login {
-  background: var(--cream-100);
-  color: var(--green-950);
-  box-shadow: 0 12px 28px rgba(18, 31, 23, 0.18);
-}
-
-.top-nav .nav-login:hover,
-.top-nav .nav-login:focus-visible,
-.mobile-nav .nav-login:hover,
-.mobile-nav .nav-login:focus-visible {
-  background: var(--white);
-  color: var(--green-950);
-}
-
 .menu-toggle {
   display: none;
   width: 44px;
